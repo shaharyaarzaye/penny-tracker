@@ -24,6 +24,7 @@ interface ExpenseState {
   expenses: Expense[];
   categories: string[];
   isLoading: boolean;
+  isLoadingCategories: boolean;
   error: string | null;
   periodFilter: PeriodFilter;
   categoryFilter: string;
@@ -52,6 +53,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
   expenses: [],
   categories: [],
   isLoading: false,
+  isLoadingCategories: false,
   error: null,
   periodFilter: 'month',
   categoryFilter: 'All',
@@ -62,12 +64,18 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
     : false,
 
   fetchCategories: async () => {
+    set({ isLoadingCategories: true });
     try {
       const res = await fetch('/api/categories');
       const data = await res.json();
-      if (data.success) set({ categories: data.data });
+      if (data.success) {
+        set({ categories: data.data, isLoadingCategories: false });
+      } else {
+        set({ isLoadingCategories: false });
+      }
     } catch (e) {
       console.error(e);
+      set({ isLoadingCategories: false });
     }
   },
 
@@ -198,13 +206,15 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
   getTotalSpending: () => get().expenses.reduce((sum, exp) => sum + exp.amount, 0),
 
   getCategoryBreakdown: () => {
+    const COLORS = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#6366F1', '#14B8A6'];
     const breakdown: Record<string, number> = {};
     get().expenses.forEach((exp) => {
       breakdown[exp.category] = (breakdown[exp.category] || 0) + exp.amount;
     });
-    return Object.entries(breakdown).map(([name, value]) => ({
+    return Object.entries(breakdown).map(([name, value], index) => ({
       name,
-      value
+      value,
+      color: COLORS[index % COLORS.length]
     }));
   },
 
